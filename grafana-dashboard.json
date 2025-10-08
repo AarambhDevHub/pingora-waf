@@ -1,0 +1,47 @@
+{
+  "dashboard": {
+    "title": "Pingora WAF Security Dashboard",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "targets": [
+          {
+            "expr": "rate(waf_total_requests[1m])",
+            "legendFormat": "Total Requests/sec"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Block Rate by Type",
+        "targets": [
+          {
+            "expr": "rate(waf_blocked_requests[1m])",
+            "legendFormat": "{{reason}}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Success Rate",
+        "targets": [
+          {
+            "expr": "(waf_allowed_requests / waf_total_requests) * 100",
+            "legendFormat": "Success %"
+          }
+        ],
+        "type": "gauge"
+      },
+      {
+        "title": "Top Blocked Reasons",
+        "targets": [
+          {
+            "expr": "topk(5, waf_blocked_requests)",
+            "legendFormat": "{{reason}}"
+          }
+        ],
+        "type": "piechart"
+      }
+    ]
+  }
+}

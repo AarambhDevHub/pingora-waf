@@ -1,0 +1,22 @@
+sql_injection:
+  enabled: true
+  block_mode: true
+
+xss:
+  enabled: true
+  block_mode: true
+
+rate_limit:
+  enabled: true
+  max_requests: 100 # More reasonable for production
+  window_secs: 60 # 1000 req/min = ~17 req/sec per IP
+
+ip_filter:
+  enabled: true
+  whitelist:
+    # Add trusted monitoring/health check IPs
+    - "10.0.0.0/8"
+  blacklist:
+    - "192.168.1.100"
+
+max_body_size: 1048576

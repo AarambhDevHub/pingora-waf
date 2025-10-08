@@ -1,0 +1,32 @@
+---
+version: 1
+threads: 4
+pid_file: /var/run/pingora-waf.pid
+error_log: /var/log/pingora-waf/error.log
+upgrade_sock: /tmp/pingora_upgrade.sock
+daemon: false
+work_stealing: true
+upstream_keepalive_pool_size: 128
+
+# Optional: User/group for privilege dropping
+# user: www-data
+# group: www-data
+
+# Upstream backend configuration
+upstream:
+  host: 127.0.0.1
+  port: 8080
+  https: false
+  connection_timeout: 5
+  read_timeout: 30
+  write_timeout: 30
+
+# Proxy listening configuration
+proxy:
+  listen_addr: 0.0.0.0
+  listen_port: 6188
+
+# Metrics configuration
+metrics:
+  listen_addr: 0.0.0.0
+  listen_port: 6190

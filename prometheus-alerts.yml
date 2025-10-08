@@ -1,0 +1,37 @@
+groups:
+  - name: waf_alerts
+    interval: 30s
+    rules:
+      - alert: HighBlockRate
+        expr: (rate(waf_blocked_requests[5m]) / rate(waf_total_requests[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High WAF block rate detected"
+          description: "More than 50% of requests are being blocked"
+
+      - alert: SQLInjectionAttack
+        expr: rate(waf_blocked_requests{reason="sql_injection"}[1m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SQL Injection attack detected"
+          description: "High rate of SQL injection attempts: {{ $value }}/sec"
+
+      - alert: RateLimitExceeded
+        expr: rate(waf_blocked_requests{reason="rate_limit"}[5m]) > 100
+        for: 2m
+        labels:
+          severity: info
+        annotations:
+          summary: "Many clients hitting rate limits"
+
+      - alert: WAFDown
+        expr: up{job="pingora-waf"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WAF service is down"

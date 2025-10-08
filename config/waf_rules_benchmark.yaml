@@ -1,0 +1,17 @@
+sql_injection:
+  enabled: true
+  block_mode: true
+
+xss:
+  enabled: true
+  block_mode: true
+
+rate_limit:
+  enabled: true
+  max_requests: 100000 # Very high for benchmarking
+  window_secs: 60
+
+ip_filter:
+  enabled: false
+
+max_body_size: 1048576

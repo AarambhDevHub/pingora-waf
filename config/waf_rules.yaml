@@ -1,0 +1,21 @@
+sql_injection:
+  enabled: true
+  block_mode: true
+
+xss:
+  enabled: true
+  block_mode: true
+
+rate_limit:
+  enabled: true
+  max_requests: 100
+  window_secs: 60
+
+ip_filter:
+  enabled: true
+  whitelist: []
+  blacklist:
+    - "192.168.1.100"
+    - "10.0.0.50"
+
+max_body_size: 1048576 # 1MB in bytes
