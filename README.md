@@ -666,25 +666,6 @@ Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for detai
 - **Documentation**: [Full Docs](docs/)
 - **Security**: security@aarambhdevhub.com
 
-## 🗺️ Roadmap
-
-### v0.2.0 (Q1 2026)
-- [ ] OWASP ModSecurity Core Rule Set
-- [ ] GeoIP blocking
-- [ ] Custom rule DSL
-- [ ] Web UI
-
-### v0.3.0 (Q2 2026)
-- [ ] ML-based anomaly detection
-- [ ] Bot detection
-- [ ] CAPTCHA integration
-- [ ] Multi-backend load balancing
-
-### v1.0.0 (Q3 2026)
-- [ ] Production hardening
-- [ ] Enterprise features
-- [ ] Professional support
-
 ## 📊 Project Stats
 
 - **Performance**: 15,143 req/sec
