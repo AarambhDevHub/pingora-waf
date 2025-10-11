@@ -992,7 +992,7 @@ sudo cargo flamegraph --bin pingora-waf
 **Community:**
 - 💬 [GitHub Discussions](https://github.com/aarambhdevhub/pingora-waf/discussions)
 - 🐛 [GitHub Issues](https://github.com/aarambhdevhub/pingora-waf/issues)
-- 📧 Email: security@aarambhdevhub.com
+- 📧 Email: [Contact via GitHub Issues]
 
 **Documentation:**
 - 📚 [Full docs](README.md)
@@ -1001,7 +1001,7 @@ sudo cargo flamegraph --bin pingora-waf
 - 📖 [API Reference](api-reference.md)
 
 **Commercial support:**
-- Contact: business@aarambhdevhub.com
+- Contact: [Contact via GitHub Issues]
 
 ---
 
@@ -1010,7 +1010,7 @@ sudo cargo flamegraph --bin pingora-waf
 **Can't find your answer?**
 
 - 💬 [Ask in Discussions](https://github.com/aarambhdevhub/pingora-waf/discussions/new)
-- 📧 Email us: support@aarambhdevhub.com
+- 📧 Email us: [Contact via GitHub Issues]
 - 🐦 Follow us: [@aarambhdevhub](https://twitter.com/aarambhdevhub)
 
 **Found an issue with the FAQ?**

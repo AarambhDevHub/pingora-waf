@@ -1140,7 +1140,7 @@ sudo journalctl -u pingora-waf -n 100 --no-pager
 2. **FAQ**: See [faq.md](faq.md)
 3. **GitHub Issues**: [Report bugs](https://github.com/aarambhdevhub/pingora-waf/issues)
 4. **Discussions**: [Ask questions](https://github.com/aarambhdevhub/pingora-waf/discussions)
-5. **Email**: security@aarambhdevhub.com (security issues only)
+5. **Email**: [Contact via GitHub Issues] (security issues only)
 
 ### Creating a Good Bug Report
 

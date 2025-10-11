@@ -1125,7 +1125,7 @@ When under attack:
 ## Support
 
 - **Questions**: [GitHub Discussions](https://github.com/aarambhdevhub/pingora-waf/discussions)
-- **Security Issues**: security@aarambhdevhub.com
+- **Security Issues**: [Contact via GitHub Issues]
 - **Bug Reports**: [GitHub Issues](https://github.com/aarambhdevhub/pingora-waf/issues)
 
 ---

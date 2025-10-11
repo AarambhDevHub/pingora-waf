@@ -42,7 +42,7 @@ In the interest of fostering an open and welcoming environment, we pledge to mak
 
 ### Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team at **security@aarambhdevhub.com**. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the project team at **[Contact via GitHub Issues]**. All complaints will be reviewed and investigated promptly and fairly.
 
 ## 🤝 How Can I Contribute?
 
@@ -97,7 +97,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 **⚠️ IMPORTANT:** Please do NOT create public issues for security vulnerabilities.
 
-Instead, email us at **security@aarambhdevhub.com** with:
+Instead, email us at **[Contact via GitHub Issues]** with:
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
@@ -705,7 +705,7 @@ We use these labels to categorize issues:
 
 - **GitHub Discussions**: For questions and discussions
 - **GitHub Issues**: For bugs and feature requests
-- **Email**: security@aarambhdevhub.com (for security issues)
+- **Email**: [Contact via GitHub Issues] (for security issues)
 
 ### Getting Help
 
@@ -713,7 +713,7 @@ If you need help with:
 
 - **Using Pingora WAF**: Check documentation first, then GitHub Discussions
 - **Contributing**: Read this guide, then ask in Discussions
-- **Security issues**: Email security@aarambhdevhub.com directly
+- **Security issues**: Email [Contact via GitHub Issues] directly
 
 ### Recognition
 
@@ -749,7 +749,7 @@ Thank you for contributing to Pingora WAF! Your efforts help make the web more s
 
 **Questions?** Feel free to ask in [GitHub Discussions](https://github.com/aarambhdevhub/pingora-waf/discussions)
 
-**Found a security issue?** Email security@aarambhdevhub.com
+**Found a security issue?** Email [Contact via GitHub Issues]
 
 **Want to chat?** Join our community discussions!
 

@@ -1246,7 +1246,7 @@ For more examples, check:
 
 - **Questions**: [GitHub Discussions](https://github.com/aarambhdevhub/pingora-waf/discussions)
 - **Issues**: [Report a bug](https://github.com/aarambhdevhub/pingora-waf/issues)
-- **Security**: security@aarambhdevhub.com
+- **Security**: Email [Contact via GitHub Issues]
 
 ---
 

@@ -664,7 +664,7 @@ Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for detai
 - **Issues**: [GitHub Issues](https://github.com/AarambhDevHub/pingora-waf/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/AarambhDevHub/pingora-waf/discussions)
 - **Documentation**: [Full Docs](docs/)
-- **Security**: security@aarambhdevhub.com
+- **Security**: [Contact via GitHub Issues]
 
 ## 📊 Project Stats
 

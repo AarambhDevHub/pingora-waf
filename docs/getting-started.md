@@ -814,7 +814,7 @@ sudo systemctl restart pingora-waf
 - **Documentation**: [Full docs](README.md)
 - **GitHub Issues**: [Report bugs](https://github.com/aarambhdevhub/pingora-waf/issues)
 - **Discussions**: [Ask questions](https://github.com/aarambhdevhub/pingora-waf/discussions)
-- **Security**: security@aarambhdevhub.com
+- **Security**: [Contact via GitHub Issues]
 - **Community**: Join our discussions!
 
 ---

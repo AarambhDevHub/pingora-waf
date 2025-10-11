@@ -46,7 +46,7 @@ Welcome to the Pingora WAF documentation! This guide will help you understand, d
 - **GitHub Repository**: [aarambhdevhub/pingora-waf](https://github.com/aarambhdevhub/pingora-waf)
 - **Issue Tracker**: [GitHub Issues](https://github.com/aarambhdevhub/pingora-waf/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/aarambhdevhub/pingora-waf/discussions)
-- **Security**: security@aarambhdevhub.com
+- **Security**: [Contact via GitHub Issues]
 
 ## 📖 Documentation Versions
 
@@ -71,7 +71,7 @@ Welcome to the Pingora WAF documentation! This guide will help you understand, d
 
 - **Documentation Issue**: [Report here](https://github.com/aarambhdevhub/pingora-waf/issues/new?labels=documentation)
 - **Usage Question**: [Ask in Discussions](https://github.com/aarambhdevhub/pingora-waf/discussions)
-- **Security Concern**: Email security@aarambhdevhub.com
+- **Security Concern**: Email [Contact via GitHub Issues]
 - **Bug Report**: [File an issue](https://github.com/aarambhdevhub/pingora-waf/issues/new?labels=bug)
 
 ## 🌟 Learn By Example
