@@ -79,23 +79,6 @@ impl ProxyHttp for WafProxy {
     {
         let client_ip = self.get_client_ip(session);
 
-        // Check Content-Length before body arrives
-        if let Some(content_length) = session.req_header().headers.get("content-length") {
-            if let Ok(length_str) = content_length.to_str() {
-                if let Ok(length) = length_str.parse::<usize>() {
-                    if length > self.max_body_size {
-                        error!(
-                            "Request body size {} exceeds limit {} - IP: {}",
-                            length, self.max_body_size, client_ip
-                        );
-                        self.metrics.increment_blocked_requests("body_too_large");
-                        let _ = session.respond_error(413).await;
-                        return Ok(true); // Block request
-                    }
-                }
-            }
-        }
-
         // IP filtering
         if let Err(violation) = ctx.ip_filter.check_ip(&client_ip) {
             error!("IP filter violation: {:?}", violation);
@@ -120,27 +103,41 @@ impl ProxyHttp for WafProxy {
             }
         }
 
-        // SQL injection detection (header and URI only at this stage)
-        if let Err(violation) = ctx.sql_detector.check(session.req_header(), None) {
-            error!("SQL injection detected: {:?}", violation);
-            ctx.violations.push(violation.clone());
-            self.metrics.increment_blocked_requests("sql_injection");
+        // Check if request has a body
+        let has_body = session
+            .req_header()
+            .headers
+            .get(http::header::CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<usize>().ok())
+            .map(|len| len > 0)
+            .unwrap_or(false);
 
-            if violation.blocked {
-                let _ = session.respond_error(403).await;
-                return Ok(true);
+        // Only do full security check for requests WITHOUT body
+        // Requests WITH body will be checked in request_body_filter
+        if !has_body {
+            // SQL injection detection (header and URI only)
+            if let Err(violation) = ctx.sql_detector.check(session.req_header(), None) {
+                error!("SQL injection detected: {:?}", violation);
+                ctx.violations.push(violation.clone());
+                self.metrics.increment_blocked_requests("sql_injection");
+
+                if violation.blocked {
+                    let _ = session.respond_error(403).await;
+                    return Ok(true);
+                }
             }
-        }
 
-        // XSS detection
-        if let Err(violation) = ctx.xss_detector.check(session.req_header(), None) {
-            error!("XSS attack detected: {:?}", violation);
-            ctx.violations.push(violation.clone());
-            self.metrics.increment_blocked_requests("xss");
+            // XSS detection
+            if let Err(violation) = ctx.xss_detector.check(session.req_header(), None) {
+                error!("XSS attack detected: {:?}", violation);
+                ctx.violations.push(violation.clone());
+                self.metrics.increment_blocked_requests("xss");
 
-            if violation.blocked {
-                let _ = session.respond_error(403).await;
-                return Ok(true);
+                if violation.blocked {
+                    let _ = session.respond_error(403).await;
+                    return Ok(true);
+                }
             }
         }
 
@@ -158,60 +155,54 @@ impl ProxyHttp for WafProxy {
     where
         Self::CTX: Send + Sync,
     {
+        // Accumulate body chunks
         if let Some(chunk) = body {
-            // Check size limit
-            match ctx.body_inspector.append_chunk(chunk) {
-                Ok(_) => {}
-                Err(e) => {
-                    error!("Body size limit exceeded: {:?}", e);
-                    self.metrics.increment_blocked_requests("body_too_large");
-                    // Don't propagate the error, just respond with 413
-                    let _ = session.respond_error(413).await;
-                    return Ok(()); // Return Ok to prevent 500 error
-                }
+            if let Err(e) = ctx.body_inspector.append_chunk(chunk) {
+                error!("Body size limit exceeded: {}", e);
+                // Use Error::explain for dynamic error messages
+                return Err(Error::explain(
+                    ErrorType::Custom("BodySizeLimitExceeded"),
+                    format!("Body size limit exceeded: {}", e),
+                ));
             }
+        }
 
-            // Only inspect when we have the full body
-            if end_of_stream {
-                let full_body = ctx.body_inspector.get_body();
+        // CRITICAL: Only inspect when we have the COMPLETE body
+        // This ensures the request doesn't reach the backend before inspection
+        if end_of_stream {
+            let full_body = ctx.body_inspector.get_body();
 
-                // Skip empty bodies
-                if full_body.is_empty() {
-                    return Ok(());
-                }
-
-                // Create a dummy request for body-only checks
-                // Use the actual URI from the session if possible
-                let uri_bytes = session.req_header().uri.to_string();
-                let dummy_req = RequestHeader::build(
-                    session.req_header().method.as_str(),
-                    uri_bytes.as_bytes(),
-                    None,
-                )
-                .unwrap_or_else(|_| RequestHeader::build("POST", b"/", None).unwrap());
-
-                // SQL injection check on body
-                if let Err(violation) = ctx.sql_detector.check(&dummy_req, Some(&full_body)) {
+            if !full_body.is_empty() {
+                // SQL injection check on complete body
+                if let Err(violation) = ctx
+                    .sql_detector
+                    .check(session.req_header(), Some(&full_body))
+                {
                     error!("SQL injection in body: {:?}", violation);
                     ctx.violations.push(violation.clone());
                     self.metrics
                         .increment_blocked_requests("sql_injection_body");
 
                     if violation.blocked {
-                        let _ = session.respond_error(403).await;
-                        return Ok(()); // Return Ok, error already sent
+                        // Return error to STOP the request from reaching upstream
+                        return Err(pingora::Error::new_str(
+                            "SQL injection detected in request body",
+                        ));
                     }
                 }
 
-                // XSS check on body
-                if let Err(violation) = ctx.xss_detector.check(&dummy_req, Some(&full_body)) {
+                // XSS check on complete body
+                if let Err(violation) = ctx
+                    .xss_detector
+                    .check(session.req_header(), Some(&full_body))
+                {
                     error!("XSS in body: {:?}", violation);
                     ctx.violations.push(violation.clone());
                     self.metrics.increment_blocked_requests("xss_body");
 
                     if violation.blocked {
-                        let _ = session.respond_error(403).await;
-                        return Ok(()); // Return Ok, error already sent
+                        // Return error to STOP the request from reaching upstream
+                        return Err(pingora::Error::new_str("XSS detected in request body"));
                     }
                 }
             }
@@ -223,14 +214,46 @@ impl ProxyHttp for WafProxy {
     async fn upstream_peer(
         &self,
         _session: &mut Session,
-        _ctx: &mut Self::CTX,
+        ctx: &mut Self::CTX,
     ) -> Result<Box<HttpPeer>> {
+        // CRITICAL SAFETY CHECK: Block if any violations were detected
+        for violation in &ctx.violations {
+            if violation.blocked {
+                error!(
+                    "Blocking upstream connection due to security violation: {:?}",
+                    violation
+                );
+                return Err(pingora::Error::new_str(
+                    "Request blocked by WAF security policy",
+                ));
+            }
+        }
+
         let peer = Box::new(HttpPeer::new(
             (self.upstream_addr.0.as_str(), self.upstream_addr.1),
             false,
             "".to_string(),
         ));
         Ok(peer)
+    }
+
+    async fn upstream_request_filter(
+        &self,
+        _session: &mut Session,
+        _upstream_request: &mut pingora::http::RequestHeader,
+        ctx: &mut Self::CTX,
+    ) -> Result<()>
+    where
+        Self::CTX: Send + Sync,
+    {
+        // Final safety check before sending to upstream
+        if ctx.violations.iter().any(|v| v.blocked) {
+            return Err(pingora::Error::new_str(
+                "Request blocked by WAF - security violation detected",
+            ));
+        }
+
+        Ok(())
     }
 
     async fn logging(
@@ -262,11 +285,16 @@ impl ProxyHttp for WafProxy {
         // Log violations
         for violation in &ctx.violations {
             warn!(
-                "Security violation - IP: {}, Type: {}, Level: {:?}, Blocked: {}",
-                client_ip, violation.threat_type, violation.threat_level, violation.blocked
+                "Security violation - IP: {}, Type: {}, Level: {:?}, Blocked: {}, Description: {}",
+                client_ip,
+                violation.threat_type,
+                violation.threat_level,
+                violation.blocked,
+                violation.description
             );
         }
 
+        // Clear body buffer for next request
         ctx.body_inspector.clear();
     }
 }
