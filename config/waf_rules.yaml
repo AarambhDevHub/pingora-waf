@@ -15,7 +15,9 @@ ip_filter:
   enabled: true
   whitelist: []
   blacklist:
-    - "192.168.1.100"
-    - "10.0.0.50"
+    - "192.168.1.100"      # Single IP
+    - "10.0.0.0/8"         # CIDR range - blocks entire 10.x.x.x network
+    - "198.51.100.0/24"    # CIDR range - blocks 198.51.100.0-255
 
 max_body_size: 1048576 # 1MB in bytes
+

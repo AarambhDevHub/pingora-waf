@@ -530,20 +530,30 @@ ip_filter:
 
 ### Common IP Ranges
 
-#### Private Networks (RFC 1918)
+#### Private Networks (RFC 1918 - IPv4)
 
 ```
 whitelist:
-  - "10.0.0.0/8"          # Class A private
-  - "172.16.0.0/12"       # Class B private
-  - "192.168.0.0/16"      # Class C private
+  - "10.0.0.0/8"          # Class A private (16M hosts)
+  - "172.16.0.0/12"       # Class B private (1M hosts)
+  - "192.168.0.0/16"      # Class C private (65K hosts)
+```
+
+#### IPv6 Networks
+
+```
+whitelist:
+  - "fc00::/7"            # Unique Local Addresses (ULA)
+  - "fe80::/10"           # Link-Local Addresses
+  - "2001:db8::/32"       # Documentation prefix
 ```
 
 #### Localhost
 
 ```
 whitelist:
-  - "127.0.0.1"           # IPv4 localhost
+  - "127.0.0.1"           # IPv4 localhost (single IP)
+  - "127.0.0.0/8"         # IPv4 loopback range (CIDR)
   - "::1"                 # IPv6 localhost
 ```
 

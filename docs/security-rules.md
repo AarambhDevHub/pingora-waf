@@ -614,7 +614,7 @@ rate_limiter.cleanup_old_entries();
 
 ## IP Filtering
 
-IP filtering provides network-level access control through whitelists and blacklists.
+IP filtering provides network-level access control through whitelists and blacklists with full CIDR notation support.
 
 ### Configuration
 
@@ -622,22 +622,23 @@ IP filtering provides network-level access control through whitelists and blackl
 ip_filter:
   enabled: true
   whitelist:
-    - "10.0.0.0/8"        # Private network
-    - "172.16.0.0/12"     # Private network
-    - "192.168.1.100"     # Specific IP
+    - "10.0.0.0/8"        # Private network (Class A)
+    - "172.16.0.0/12"     # Private network (Class B)
+    - "192.168.1.100"     # Specific IP (treated as /32)
+    - "2001:db8::/32"     # IPv6 CIDR range
   blacklist:
     - "198.51.100.0/24"   # Malicious subnet
-    - "203.0.113.50"      # Blocked IP
+    - "203.0.113.50"      # Blocked single IP
 ```
 
 ### How It Works
 
 1. **Whitelist Mode** (if whitelist is not empty)
-   - Only IPs in whitelist are allowed
+   - Only IPs matching whitelisted networks are allowed
    - All other IPs are blocked with 403
 
 2. **Blacklist Mode** (if whitelist is empty)
-   - IPs in blacklist are blocked with 403
+   - IPs matching blacklisted networks are blocked with 403
    - All other IPs are allowed
 
 3. **Priority**
@@ -647,33 +648,72 @@ ip_filter:
 
 ### Supported Formats
 
-#### Individual IPs
+#### Individual IPs (IPv4 & IPv6)
 
 ```
 whitelist:
-  - "192.168.1.100"
-  - "203.0.113.50"
+  - "192.168.1.100"     # IPv4 - treated as /32
+  - "203.0.113.50"      # IPv4 - treated as /32
+  - "::1"               # IPv6 localhost - treated as /128
+  - "2001:db8::1"       # IPv6 - treated as /128
 ```
 
-#### CIDR Notation (Subnets)
+#### CIDR Notation (IPv4)
+
+| CIDR | Range | Hosts |
+|------|-------|-------|
+| `10.0.0.0/8` | 10.0.0.0 - 10.255.255.255 | 16M |
+| `172.16.0.0/12` | 172.16.0.0 - 172.31.255.255 | 1M |
+| `192.168.0.0/16` | 192.168.0.0 - 192.168.255.255 | 65K |
+| `192.168.1.0/24` | 192.168.1.0 - 192.168.1.255 | 256 |
+| `192.168.1.0/28` | 192.168.1.0 - 192.168.1.15 | 16 |
 
 ```
 whitelist:
-  - "10.0.0.0/8"         # 10.0.0.0 - 10.255.255.255
-  - "172.16.0.0/12"      # 172.16.0.0 - 172.31.255.255
-  - "192.168.0.0/16"     # 192.168.0.0 - 192.168.255.255
-  - "203.0.113.0/24"     # 203.0.113.0 - 203.0.113.255
+  - "10.0.0.0/8"         # Class A private
+  - "172.16.0.0/12"      # Class B private  
+  - "192.168.0.0/16"     # Class C private
+  - "203.0.113.0/24"     # Specific subnet
+```
+
+#### CIDR Notation (IPv6)
+
+| CIDR | Description |
+|------|-------------|
+| `2001:db8::/32` | Documentation prefix |
+| `fe80::/10` | Link-local addresses |
+| `fc00::/7` | Unique local addresses |
+| `::1/128` | Localhost |
+
+```
+whitelist:
+  - "2001:db8::/32"      # IPv6 documentation range
+  - "fc00::/7"           # IPv6 unique local
+  - "::1/128"            # IPv6 localhost
 ```
 
 ### Use Cases
 
-#### Internal Application
+#### Internal Application (IPv4)
 
 ```
 ip_filter:
   enabled: true
   whitelist:
-    - "10.0.0.0/8"     # Only internal network
+    - "10.0.0.0/8"       # Only internal network
+    - "192.168.0.0/16"   # Office network
+```
+
+#### Internal Application (Dual-Stack IPv4/IPv6)
+
+```
+ip_filter:
+  enabled: true
+  whitelist:
+    - "10.0.0.0/8"       # IPv4 internal
+    - "192.168.0.0/16"   # IPv4 office
+    - "fc00::/7"         # IPv6 unique local
+    - "2001:db8::/32"    # IPv6 internal
 ```
 
 #### Block Known Attackers
@@ -682,8 +722,9 @@ ip_filter:
 ip_filter:
   enabled: true
   blacklist:
-    - "198.51.100.50"  # Known attacker
-    - "203.0.113.0/24" # Malicious subnet
+    - "198.51.100.50"    # Known attacker (single IP)
+    - "203.0.113.0/24"   # Malicious subnet (256 IPs)
+    - "192.0.2.0/24"     # Entire TEST-NET-1
 ```
 
 #### Geographic Restriction
@@ -692,21 +733,25 @@ ip_filter:
 ip_filter:
   enabled: true
   whitelist:
-    - "203.0.113.0/22"  # Country-specific IP range
+    - "203.0.113.0/22"   # Country-specific IP range
 ```
 
 ### Examples
 
 ```
-# Whitelisted IP - allowed
+# Whitelisted IP (matches 10.0.0.0/8) - allowed
 curl --interface 10.0.0.5 http://localhost:6188/api/test
+# Response: 200 OK
+
+# Another IP in range (matches 10.0.0.0/8) - allowed
+curl --interface 10.255.255.254 http://localhost:6188/api/test
 # Response: 200 OK
 
 # Non-whitelisted IP - blocked
 curl --interface 198.51.100.5 http://localhost:6188/api/test
 # Response: 403 Forbidden
 
-# Blacklisted IP - blocked
+# Blacklisted IP (matches 203.0.113.0/24) - blocked
 curl --interface 203.0.113.50 http://localhost:6188/api/test
 # Response: 403 Forbidden
 ```
@@ -714,18 +759,22 @@ curl --interface 203.0.113.50 http://localhost:6188/api/test
 ### Performance Impact
 
 - **Latency overhead**: < 0.1ms
-- **Memory**: Constant (HashSet lookup)
-- **Scalability**: O(log n) for large lists
+- **Memory**: O(n) where n = number of rules
+- **Lookup**: O(n) - checks each network range
+- **Scalability**: Efficient for typical rule counts (< 1000)
 
 ### Best Practices
 
-1. **Use whitelisting for sensitive applications**
-2. **Regularly update blacklists** from threat intelligence
-3. **Monitor blocked IPs**
+1. **Use CIDR ranges instead of individual IPs** when possible for easier management
+2. **Use whitelisting for sensitive applications** (admin panels, internal APIs)
+3. **Regularly update blacklists** from threat intelligence feeds
+4. **Monitor blocked IPs** using Prometheus metrics:
    ```
    waf_blocked_requests{reason="ip_blacklist"}
+   waf_blocked_requests{reason="ip_not_whitelisted"}
    ```
-4. **Document IP ranges** for maintenance
+5. **Document IP ranges** for maintenance and auditing
+6. **Test CIDR rules** before deploying to production
 
 ## Request Body Inspection
 

@@ -13,7 +13,7 @@ A high-performance, memory-safe Web Application Firewall built with Cloudflare's
 - ✅ **SQL Injection Detection** - Advanced pattern matching with 15+ attack signatures, 100% detection rate
 - ✅ **XSS Prevention** - Cross-site scripting attack blocking with URL decoding
 - ✅ **Rate Limiting** - Per-IP request throttling with configurable windows
-- ✅ **IP Filtering** - Whitelist/blacklist support for network-level protection
+- ✅ **IP Filtering** - Whitelist/blacklist with CIDR notation support (e.g., `10.0.0.0/8`)
 - ✅ **Request Body Inspection** - Deep packet analysis with configurable size limits (1MB default)
 - ✅ **Header Validation** - Custom header security checks with safe header exemptions
 
@@ -176,11 +176,16 @@ rate_limit:
   max_requests: 1000    # Maximum requests per window
   window_secs: 60       # Time window in seconds (1000/min = ~17 req/sec per IP)
 
-# IP Address Filtering
+# IP Address Filtering (with CIDR support)
 ip_filter:
   enabled: false        # Enable for production
-  whitelist: []         # Allow only these IPs (empty = allow all)
-  blacklist: []         # Block these IPs
+  whitelist: []         # Allow only these IPs/networks (empty = allow all)
+  blacklist: []         # Block these IPs/networks
+  # Supports both individual IPs and CIDR notation:
+  # - "192.168.1.1"      → Single IP (treated as /32)
+  # - "10.0.0.0/8"       → CIDR range (10.0.0.0 - 10.255.255.255)
+  # - "192.168.0.0/16"   → CIDR range (192.168.0.0 - 192.168.255.255)
+  # - "2001:db8::/32"    → IPv6 CIDR range
 
 # Request Body Limits
 max_body_size: 1048576  # 1MB in bytes
