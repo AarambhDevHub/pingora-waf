@@ -19,5 +19,11 @@ ip_filter:
     - "10.0.0.0/8"         # CIDR range - blocks entire 10.x.x.x network
     - "198.51.100.0/24"    # CIDR range - blocks 198.51.100.0-255
 
-max_body_size: 1048576 # 1MB in bytes
+bot_detection:
+  enabled: true
+  block_mode: true
+  allow_known_bots: true   # Allow Googlebot, Bingbot, etc.
+  custom_bad_bots: []      # Additional patterns to block (regex)
+  custom_good_bots: []     # Additional identifiers to allow
 
+max_body_size: 1048576 # 1MB in bytes

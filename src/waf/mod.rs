@@ -1,4 +1,5 @@
 pub mod body_inspector;
+pub mod bot_detector;
 pub mod ip_filter;
 pub mod rate_limiter;
 pub mod rules;
@@ -6,6 +7,7 @@ pub mod sql_injection;
 pub mod xss_detector;
 
 pub use body_inspector::*;
+pub use bot_detector::*;
 pub use ip_filter::*;
 pub use rate_limiter::*;
 pub use rules::*;

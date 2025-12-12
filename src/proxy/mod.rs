@@ -15,6 +15,7 @@ pub struct WafProxy {
     pub xss_detector: Arc<XssDetector>,
     pub rate_limiter: Arc<RateLimiter>,
     pub ip_filter: Arc<IpFilter>,
+    pub bot_detector: Arc<BotDetector>,
     pub metrics: Arc<MetricsCollector>,
     pub upstream_addr: (String, u16),
     pub max_body_size: usize,
@@ -27,6 +28,7 @@ impl WafProxy {
         xss_detector: Arc<XssDetector>,
         rate_limiter: Arc<RateLimiter>,
         ip_filter: Arc<IpFilter>,
+        bot_detector: Arc<BotDetector>,
         metrics: Arc<MetricsCollector>,
         max_body_size: usize,
     ) -> Self {
@@ -35,6 +37,7 @@ impl WafProxy {
             xss_detector,
             rate_limiter,
             ip_filter,
+            bot_detector,
             metrics,
             upstream_addr,
             max_body_size,
@@ -99,6 +102,23 @@ impl ProxyHttp for WafProxy {
 
             if violation.blocked {
                 let _ = session.respond_error(429).await;
+                return Ok(true);
+            }
+        }
+
+        // Bot detection
+        if let Err(violation) = self.bot_detector.check(session.req_header(), None) {
+            warn!("Bot detection violation: {:?}", violation);
+            ctx.violations.push(violation.clone());
+            let reason = if violation.threat_type == "BAD_BOT" {
+                "bad_bot"
+            } else {
+                "suspicious_bot"
+            };
+            self.metrics.increment_blocked_requests(reason);
+
+            if violation.blocked {
+                let _ = session.respond_error(403).await;
                 return Ok(true);
             }
         }

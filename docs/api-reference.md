@@ -266,6 +266,60 @@ match limiter.check_rate_limit("203.0.113.42") {
 }
 ```
 
+### BotDetector
+
+Detects and blocks malicious bots based on User-Agent patterns.
+
+```
+pub struct BotDetector {
+    pub enabled: bool,
+    pub block_mode: bool,
+    pub allow_known_bots: bool,
+}
+
+impl BotDetector {
+    /// Create a new bot detector
+    ///
+    /// # Arguments
+    /// * `enabled` - Whether bot detection is enabled
+    /// * `block_mode` - true = block bad bots, false = log only
+    /// * `allow_known_bots` - Allow Googlebot, Bingbot, etc.
+    pub fn new(enabled: bool, block_mode: bool, allow_known_bots: bool) -> Self;
+
+    /// Add a custom bad bot pattern (regex)
+    pub fn add_bad_bot_pattern(&mut self, pattern: &str) -> Result<(), String>;
+
+    /// Add a custom good bot identifier (substring match)
+    pub fn add_good_bot_identifier(&mut self, identifier: &str);
+
+    /// Detect bot type from User-Agent
+    pub fn detect_bot(&self, user_agent: Option<&str>) -> BotType;
+}
+
+pub enum BotType {
+    GoodBot(String),      // Allowed (Googlebot, Bingbot)
+    BadBot(String),       // Blocked (sqlmap, nikto)
+    SuspiciousBot(String), // Missing/empty User-Agent
+    NotBot,               // Normal user
+}
+```
+
+**Example Usage:**
+
+```rust
+let mut detector = BotDetector::new(true, true, true);
+
+// Add custom patterns
+detector.add_bad_bot_pattern(r"(?i)mycrawler")?;
+detector.add_good_bot_identifier("mymonitor");
+
+// Check request
+match detector.check(session.req_header(), None) {
+    Ok(()) => { /* Request allowed */ }
+    Err(violation) => { /* Bot detected */ }
+}
+```
+
 ### IpFilter
 
 IP whitelist and blacklist filtering with CIDR notation support.

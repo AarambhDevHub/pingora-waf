@@ -590,6 +590,63 @@ Request handling:
 2. Fallback to direct client IP
 3. Apply whitelist/blacklist rules
 
+## Bot Detection
+
+### Configuration Options
+
+```
+bot_detection:
+  enabled: true
+  block_mode: true
+  allow_known_bots: true
+  custom_bad_bots: []
+  custom_good_bots: []
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enabled` | boolean | `true` | Enable/disable bot detection |
+| `block_mode` | boolean | `true` | `true` = block bad bots, `false` = log only |
+| `allow_known_bots` | boolean | `true` | Allow Googlebot, Bingbot, etc. |
+| `custom_bad_bots` | array | `[]` | Additional regex patterns to block |
+| `custom_good_bots` | array | `[]` | Additional identifiers to allow |
+
+### Detection Modes
+
+#### Block Bad Bots (Default)
+
+```yaml
+bot_detection:
+  enabled: true
+  block_mode: true
+  allow_known_bots: true
+```
+
+Blocks: `sqlmap`, `nikto`, `scrapy`, `curl/`, `wget/`, etc.
+Allows: `Googlebot`, `Bingbot`, `Slackbot`, etc.
+
+#### Log Only Mode
+
+```yaml
+bot_detection:
+  enabled: true
+  block_mode: false  # Log but don't block
+```
+
+#### Custom Patterns
+
+```yaml
+bot_detection:
+  custom_bad_bots:
+    - "(?i)mycrawler"      # Regex pattern
+    - "(?i)badbot\\d+"
+  custom_good_bots:
+    - "mymonitor"          # Substring match
+    - "internaltool"
+```
+
 ## Body Size Limits
 
 ### Configuration

@@ -14,6 +14,7 @@ A high-performance, memory-safe Web Application Firewall built with Cloudflare's
 - ✅ **XSS Prevention** - Cross-site scripting attack blocking with URL decoding
 - ✅ **Rate Limiting** - Per-IP request throttling with configurable windows
 - ✅ **IP Filtering** - Whitelist/blacklist with CIDR notation support (e.g., `10.0.0.0/8`)
+- ✅ **Bot Detection** - Block malicious bots (sqlmap, nikto, scrapers) while allowing Googlebot, Bingbot
 - ✅ **Request Body Inspection** - Deep packet analysis with configurable size limits (1MB default)
 - ✅ **Header Validation** - Custom header security checks with safe header exemptions
 
@@ -186,6 +187,14 @@ ip_filter:
   # - "10.0.0.0/8"       → CIDR range (10.0.0.0 - 10.255.255.255)
   # - "192.168.0.0/16"   → CIDR range (192.168.0.0 - 192.168.255.255)
   # - "2001:db8::/32"    → IPv6 CIDR range
+
+# Bot Detection
+bot_detection:
+  enabled: true         # Enable/disable bot detection
+  block_mode: true      # true = block bad bots, false = log only
+  allow_known_bots: true  # Allow Googlebot, Bingbot, etc.
+  custom_bad_bots: []   # Additional regex patterns to block
+  custom_good_bots: []  # Additional identifiers to allow
 
 # Request Body Limits
 max_body_size: 1048576  # 1MB in bytes
