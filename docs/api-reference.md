@@ -268,12 +268,14 @@ match limiter.check_rate_limit("203.0.113.42") {
 
 ### IpFilter
 
-IP whitelist and blacklist filtering.
+IP whitelist and blacklist filtering with CIDR notation support.
 
 ```
+use ipnetwork::IpNetwork;
+
 pub struct IpFilter {
-    pub whitelist: HashSet<IpAddr>,
-    pub blacklist: HashSet<IpAddr>,
+    pub whitelist: Vec<IpNetwork>,
+    pub blacklist: Vec<IpNetwork>,
     pub enabled: bool,
 }
 
@@ -289,27 +291,35 @@ impl IpFilter {
     /// ```
     pub fn new(enabled: bool) -> Self;
 
-    /// Add an IP to the whitelist
+    /// Add an IP or CIDR range to the whitelist
     ///
     /// # Arguments
-    /// * `ip` - IP address as string (e.g., "192.168.1.1")
+    /// * `ip_or_cidr` - IP address or CIDR notation string
+    ///
+    /// # Supported Formats
+    /// * Single IP: `"192.168.1.1"` (treated as /32)
+    /// * CIDR range: `"10.0.0.0/8"`, `"192.168.0.0/16"`
+    /// * IPv6: `"::1"`, `"2001:db8::/32"`
     ///
     /// # Example
     /// ```rust
-    /// filter.add_to_whitelist("10.0.0.1")?;
+    /// filter.add_to_whitelist("192.168.1.1")?;      // Single IP
+    /// filter.add_to_whitelist("10.0.0.0/8")?;       // CIDR range
+    /// filter.add_to_whitelist("2001:db8::/32")?;    // IPv6 CIDR
     /// ```
-    pub fn add_to_whitelist(&mut self, ip: &str) -> Result<(), String>;
+    pub fn add_to_whitelist(&mut self, ip_or_cidr: &str) -> Result<(), String>;
 
-    /// Add an IP to the blacklist
+    /// Add an IP or CIDR range to the blacklist
     ///
     /// # Arguments
-    /// * `ip` - IP address as string
+    /// * `ip_or_cidr` - IP address or CIDR notation string
     ///
     /// # Example
     /// ```rust
-    /// filter.add_to_blacklist("192.0.2.1")?;
+    /// filter.add_to_blacklist("192.168.1.100")?;    // Single IP
+    /// filter.add_to_blacklist("198.51.100.0/24")?;  // CIDR range
     /// ```
-    pub fn add_to_blacklist(&mut self, ip: &str) -> Result<(), String>;
+    pub fn add_to_blacklist(&mut self, ip_or_cidr: &str) -> Result<(), String>;
 
     /// Check if an IP is allowed
     ///
@@ -328,35 +338,49 @@ impl IpFilter {
     /// }
     /// ```
     pub fn check_ip(&self, ip_str: &str) -> Result<(), SecurityViolation>;
+
+    /// Get the number of whitelist entries
+    pub fn whitelist_count(&self) -> usize;
+
+    /// Get the number of blacklist entries
+    pub fn blacklist_count(&self) -> usize;
 }
 ```
 
-**Whitelist Mode:**
+**CIDR Whitelist Mode:**
 
 ```
 let mut filter = IpFilter::new(true);
 
-// Add trusted IPs
-filter.add_to_whitelist("10.0.0.1")?;
-filter.add_to_whitelist("10.0.0.2")?;
+// Add trusted network ranges
+filter.add_to_whitelist("10.0.0.0/8")?;       // Entire 10.x.x.x network
+filter.add_to_whitelist("192.168.0.0/16")?;   // Entire 192.168.x.x network
 
-// Only whitelisted IPs are allowed
+// All IPs in whitelisted ranges are allowed
 assert!(filter.check_ip("10.0.0.1").is_ok());
-assert!(filter.check_ip("192.168.1.1").is_err()); // Not whitelisted
+assert!(filter.check_ip("10.255.255.255").is_ok());
+assert!(filter.check_ip("192.168.1.100").is_ok());
+
+// IPs outside ranges are blocked
+assert!(filter.check_ip("172.16.0.1").is_err());
 ```
 
-**Blacklist Mode:**
+**CIDR Blacklist Mode:**
 
 ```
 let mut filter = IpFilter::new(true);
 
-// Add malicious IPs
-filter.add_to_blacklist("192.0.2.1")?;
-filter.add_to_blacklist("198.51.100.42")?;
+// Block malicious network ranges
+filter.add_to_blacklist("198.51.100.0/24")?;  // Block entire subnet
+filter.add_to_blacklist("203.0.113.50")?;     // Block specific IP
 
-// All IPs allowed except blacklisted
+// All IPs in blacklisted ranges are blocked
+assert!(filter.check_ip("198.51.100.1").is_err());
+assert!(filter.check_ip("198.51.100.255").is_err());
+assert!(filter.check_ip("203.0.113.50").is_err());
+
+// Other IPs are allowed
 assert!(filter.check_ip("10.0.0.1").is_ok());
-assert!(filter.check_ip("192.0.2.1").is_err()); // Blacklisted
 ```
 
 ### BodyInspector
