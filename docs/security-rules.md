@@ -9,6 +9,7 @@ This guide provides comprehensive documentation for all security rules implement
 - [Cross-Site Scripting (XSS) Prevention](#cross-site-scripting-xss-prevention)
 - [Rate Limiting](#rate-limiting)
 - [IP Filtering](#ip-filtering)
+- [Bot Detection](#bot-detection)
 - [Request Body Inspection](#request-body-inspection)
 - [Custom Security Rules](#custom-security-rules)
 - [Rule Engine](#rule-engine)
@@ -775,6 +776,110 @@ curl --interface 203.0.113.50 http://localhost:6188/api/test
    ```
 5. **Document IP ranges** for maintenance and auditing
 6. **Test CIDR rules** before deploying to production
+
+## Bot Detection
+
+Bot detection identifies and blocks malicious bots while allowing legitimate crawlers.
+
+### Configuration
+
+```
+bot_detection:
+  enabled: true
+  block_mode: true
+  allow_known_bots: true   # Allow Googlebot, Bingbot, etc.
+  custom_bad_bots: []      # Additional regex patterns to block
+  custom_good_bots: []     # Additional identifiers to allow
+```
+
+### How It Works
+
+1. **User-Agent Analysis** - Checks User-Agent header against known patterns
+2. **Bad Bot Detection** - Blocks security scanners, scrapers, spam bots
+3. **Good Bot Allowlist** - Allows legitimate crawlers (search engines, social media)
+4. **Suspicious Detection** - Flags missing/empty/short User-Agent
+
+### Known Bad Bots (Blocked)
+
+| Category | Examples |
+|----------|----------|
+| Security Scanners | `sqlmap`, `nikto`, `nmap`, `burpsuite`, `acunetix`, `nessus` |
+| Vulnerability Tools | `metasploit`, `dirbuster`, `gobuster`, `wpscan`, `arachni` |
+| Web Scrapers | `scrapy`, `httrack`, `webcopier`, `teleport pro` |
+| SEO/Spam Bots | `semrush`, `ahrefs`, `mj12bot`, `dotbot` |
+| Library Defaults | `curl/`, `wget/`, `python-requests`, `Go-http-client` |
+
+### Known Good Bots (Allowed)
+
+| Category | Examples |
+|----------|----------|
+| Search Engines | `Googlebot`, `Bingbot`, `DuckDuckBot`, `Yandexbot`, `Baiduspider` |
+| Social Media | `Twitterbot`, `Facebookexternalhit`, `LinkedInBot`, `Pinterestbot` |
+| Messaging | `Slackbot`, `Telegrambot`, `Discordbot`, `WhatsApp` |
+| Monitoring | `UptimeRobot`, `Pingdom`, `StatusCake`, `GTmetrix` |
+
+### Suspicious Requests (Blocked)
+
+- **Missing User-Agent header**
+- **Empty User-Agent header**
+- **User-Agent too short** (< 10 characters)
+
+### Examples
+
+```bash
+# Bad bot - blocked
+curl -H "User-Agent: sqlmap/1.4.7" http://localhost:6188/api/test
+# Response: 403 Forbidden
+
+# Good bot - allowed
+curl -H "User-Agent: Googlebot/2.1" http://localhost:6188/api/test
+# Response: 200 OK
+
+# Missing User-Agent - blocked
+curl -H "User-Agent: " http://localhost:6188/api/test
+# Response: 403 Forbidden
+
+# Normal browser - allowed
+curl -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" http://localhost:6188/
+# Response: 200 OK
+```
+
+### Custom Patterns
+
+Add custom bad bot patterns (regex):
+
+```yaml
+bot_detection:
+  custom_bad_bots:
+    - "(?i)mycustombot"
+    - "(?i)scraper\\d+"
+```
+
+Add custom good bot identifiers (substring match):
+
+```yaml
+bot_detection:
+  custom_good_bots:
+    - "mymonitoringbot"
+    - "internaltool"
+```
+
+### Performance Impact
+
+- **Latency overhead**: < 0.1ms
+- **Memory**: Constant (compiled regex patterns)
+- **CPU**: Minimal (lazy initialization)
+
+### Best Practices
+
+1. **Enable `allow_known_bots`** to avoid blocking search engines
+2. **Monitor blocked bots** with Prometheus:
+   ```
+   waf_blocked_requests{reason="bad_bot"}
+   waf_blocked_requests{reason="suspicious_bot"}
+   ```
+3. **Test custom patterns** before deploying
+4. **Review logs** to identify false positives
 
 ## Request Body Inspection
 

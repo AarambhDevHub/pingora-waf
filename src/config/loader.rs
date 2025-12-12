@@ -7,6 +7,8 @@ pub struct WafConfig {
     pub xss: RuleConfig,
     pub rate_limit: RateLimitConfig,
     pub ip_filter: IpFilterConfig,
+    #[serde(default)]
+    pub bot_detection: BotDetectionConfig,
     #[serde(default = "default_max_body_size")]
     pub max_body_size: usize,
 }
@@ -35,6 +37,32 @@ pub struct IpFilterConfig {
     pub blacklist: Vec<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BotDetectionConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_true")]
+    pub block_mode: bool,
+    #[serde(default = "default_true")]
+    pub allow_known_bots: bool,
+    #[serde(default)]
+    pub custom_bad_bots: Vec<String>,
+    #[serde(default)]
+    pub custom_good_bots: Vec<String>,
+}
+
+impl Default for BotDetectionConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            block_mode: true,
+            allow_known_bots: true,
+            custom_bad_bots: vec![],
+            custom_good_bots: vec![],
+        }
+    }
+}
+
 // Default value functions
 fn default_max_body_size() -> usize {
     1048576 // 1MB
@@ -46,6 +74,10 @@ fn default_max_requests() -> u32 {
 
 fn default_window_secs() -> u64 {
     60
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl WafConfig {
@@ -75,6 +107,7 @@ impl WafConfig {
                 whitelist: vec![],
                 blacklist: vec![],
             },
+            bot_detection: BotDetectionConfig::default(),
             max_body_size: 1048576, // 1MB
         }
     }

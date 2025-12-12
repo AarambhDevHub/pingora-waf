@@ -87,6 +87,21 @@ fn main() {
     }
     let ip_filter = Arc::new(ip_filter);
 
+    let mut bot_detector = BotDetector::new(
+        config.bot_detection.enabled,
+        config.bot_detection.block_mode,
+        config.bot_detection.allow_known_bots,
+    );
+    for pattern in &config.bot_detection.custom_bad_bots {
+        if let Err(e) = bot_detector.add_bad_bot_pattern(pattern) {
+            error!("Invalid bot pattern '{}': {}", pattern, e);
+        }
+    }
+    for identifier in &config.bot_detection.custom_good_bots {
+        bot_detector.add_good_bot_identifier(identifier);
+    }
+    let bot_detector = Arc::new(bot_detector);
+
     let metrics = Arc::new(MetricsCollector::new());
 
     let upstream_host = args
@@ -103,6 +118,7 @@ fn main() {
         xss_detector,
         rate_limiter.clone(),
         ip_filter,
+        bot_detector,
         metrics.clone(),
         config.max_body_size,
     );

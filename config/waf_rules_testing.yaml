@@ -19,4 +19,11 @@ ip_filter:
   blacklist:
     - "192.168.1.100"
 
+bot_detection:
+  enabled: true
+  block_mode: true
+  allow_known_bots: true
+  custom_bad_bots: []
+  custom_good_bots: []
+
 max_body_size: 1048576
