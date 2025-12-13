@@ -256,6 +256,25 @@ RUST_LOG=debug ./target/release/pingora-waf
 cargo build --release
 ```
 
+### Issue: Hot Reload Not Working
+
+**Symptoms:**
+Configuration changes are not picked up.
+
+**Solutions:**
+
+1. **Check enable flag:**
+```yaml
+hot_reload:
+  enabled: true
+```
+
+2. **Check file permissions:**
+Ensure the user running `pingora-waf` has read access to the config file.
+
+3. **Check logs:**
+Look for "Configuration reloaded" or "Failed to reload configuration".
+
 ## 🔴 Runtime Errors
 
 ### Issue: Backend Connection Refused
@@ -655,6 +674,19 @@ rate_limit:
   max_requests: 10000  # Much higher
   window_secs: 60
 ```
+
+### Issue: Path Traversal False Positives
+
+**Symptoms:**
+Legitimate paths containing `..` (e.g. in query params) are blocked.
+
+**Solutions:**
+
+1. **Check encoding:**
+Ensure clients are properly URL-encoding parameters if they contain valid dots.
+
+2. **Disable strict traversal checks:**
+If necessary, you can toggle `block_mode: false` for path traversal while debugging.
 
 ### Issue: Attacks Not Being Blocked (False Negatives)
 

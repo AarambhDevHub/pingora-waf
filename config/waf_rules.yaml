@@ -6,6 +6,14 @@ xss:
   enabled: true
   block_mode: true
 
+path_traversal:
+  enabled: true
+  block_mode: true
+
+command_injection:
+  enabled: true
+  block_mode: true
+
 rate_limit:
   enabled: true
   max_requests: 100
@@ -27,3 +35,8 @@ bot_detection:
   custom_good_bots: []     # Additional identifiers to allow
 
 max_body_size: 1048576 # 1MB in bytes
+
+hot_reload:
+  enabled: true
+  watch_interval_secs: 5
+

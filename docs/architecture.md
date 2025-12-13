@@ -45,7 +45,9 @@ Pingora WAF is a high-performance, memory-safe Web Application Firewall built on
 │ │  2. Rate Limiter   → Per-IP throttling                  │ │
 │ │  3. SQL Detection  → URI & headers scan                 │ │
 │ │  4. XSS Detection  → URI & headers scan                 │ │
-│ │  5. Body Inspector → Deep packet inspection             │ │
+│ │  5. Path Traversal → Directory traversal check          │ │
+│ │  6. Cmd Injection  → Shell command checks               │ │
+│ │  7. Body Inspector → Deep packet inspection             │ │
 │ └─────────────────────────────────────────────────────────┘ │
 │                                                             │
 │ ┌─────────────────────────────────────────────────────────┐ │
@@ -81,6 +83,8 @@ Pingora WAF is a high-performance, memory-safe Web Application Firewall built on
 pub struct WafProxy {
     pub sql_detector: Arc<SqlInjectionDetector>,
     pub xss_detector: Arc<XssDetector>,
+    pub path_traversal_detector: Arc<PathTraversalDetector>,
+    pub cmd_injection_detector: Arc<CommandInjectionDetector>,
     pub rate_limiter: Arc<RateLimiter>,
     pub ip_filter: Arc<IpFilter>,
     pub metrics: Arc<MetricsCollector>,
@@ -147,7 +151,35 @@ pub struct XssDetector {
 - JavaScript protocol: `javascript:`
 - Dangerous tags: `<iframe>`, `<object>`
 
-##### c) Rate Limiter (`rate_limiter.rs`)
+##### c) Path Traversal Detector (`path_traversal.rs`)
+
+```rust
+pub struct PathTraversalDetector {
+    pub enabled: bool,
+    pub block_mode: bool,
+}
+```
+
+**Detection Method**:
+- Check for `../` and encoded variants
+- Check for absolute paths to sensitive files
+- Normalize paths before checking
+
+##### d) Command Injection Detector (`command_injection.rs`)
+
+```rust
+pub struct CommandInjectionDetector {
+    pub enabled: bool,
+    pub block_mode: bool,
+}
+```
+
+**Detection Method**:
+- Regex pattern matching for shell operators
+- Detects `;`, `|`, `&&`, `$()`, backticks
+- Blocks dangerous commands (`rm`, `wget`, etc.)
+
+##### e) Rate Limiter (`rate_limiter.rs`)
 
 ```
 pub struct RateLimiter {
@@ -164,7 +196,7 @@ pub struct RateLimiter {
 
 **Performance**: O(1) lookup, O(1) update
 
-##### d) IP Filter (`ip_filter.rs`)
+##### f) IP Filter (`ip_filter.rs`)
 
 ```
 pub struct IpFilter {
@@ -179,7 +211,7 @@ pub struct IpFilter {
 - CIDR notation support (planned)
 - Whitelist priority over blacklist
 
-##### e) Body Inspector (`body_inspector.rs`)
+##### g) Body Inspector (`body_inspector.rs`)
 
 ```
 pub struct BodyInspector {
@@ -222,6 +254,9 @@ pub struct MetricsCollector {
 pub struct WafConfig {
     pub sql_injection: RuleConfig,
     pub xss: RuleConfig,
+    pub path_traversal: RuleConfig,
+    pub command_injection: RuleConfig,
+    pub hot_reload: HotReloadConfig,
     pub rate_limit: RateLimitConfig,
     pub ip_filter: IpFilterConfig,
     pub max_body_size: usize,
@@ -230,7 +265,7 @@ pub struct WafConfig {
 
 **Format**: YAML
 **Validation**: At load time
-**Hot Reload**: Not supported (requires restart)
+**Hot Reload**: Supported via file watcher (notify crate)
 
 ## Request Flow
 
@@ -282,6 +317,14 @@ pub struct WafConfig {
 │       ├─ Decode URI                                          │
 │       ├─ Check against XSS patterns                          │
 │       ├─ Scan non-safe headers                               │
+│    E. XSS Detection (Headers & URI)                          │
+│       ├─ Decode URI                                          │
+│       ├─ Check against XSS patterns                          │
+│       ├─ Scan non-safe headers                               │
+│       └─ Return 403 if detected                              │
+│                                                              │
+│    F. Path Traversal & Cmd Injection                         │
+│       ├─ Check regular expressions                           │
 │       └─ Return 403 if detected                              │
 │                                                              │
 │    ✅ All checks passed → Continue to body inspection         │
@@ -444,7 +487,8 @@ impl SqlInjectionDetector {
 │  │ Metrics (AtomicU64) - Lock-free                   │  │
 │  │ SQL Patterns (Static) - Read-only                 │  │
 │  │ XSS Patterns (Static) - Read-only                 │  │
-│  │ Config (Arc<Config>) - Read-only                  │  │
+│  │ Path/Cmd Patterns (Static) - Read-only            │  │
+│  │ Config (Arc<WafConfigSwap>) - Atomic Swap         │  │
 │  └───────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```

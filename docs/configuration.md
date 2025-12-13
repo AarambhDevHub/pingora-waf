@@ -8,11 +8,14 @@ This guide covers all configuration options for Pingora WAF, including security 
 - [Basic Configuration](#basic-configuration)
 - [SQL Injection Detection](#sql-injection-detection)
 - [XSS Prevention](#xss-prevention)
+- [Path Traversal Detection](#path-traversal-detection)
+- [Command Injection Detection](#command-injection-detection)
 - [Rate Limiting](#rate-limiting)
 - [IP Filtering](#ip-filtering)
 - [Body Size Limits](#body-size-limits)
 - [Backend Configuration](#backend-configuration)
 - [Logging Configuration](#logging-configuration)
+- [Hot Configuration Reload](#hot-configuration-reload)
 - [Environment Variables](#environment-variables)
 - [Advanced Configuration](#advanced-configuration)
 - [Configuration Examples](#configuration-examples)
@@ -80,7 +83,18 @@ sql_injection:
 # Cross-Site Scripting (XSS) Protection
 xss:
   enabled: true           # Enable/disable XSS detection
+  enabled: true           # Enable/disable XSS detection
   block_mode: true        # true = block requests, false = log only
+
+# Path Traversal Protection
+path_traversal:
+  enabled: true
+  block_mode: true
+
+# Command Injection Protection
+command_injection:
+  enabled: true
+  block_mode: true
 
 # Rate Limiting
 rate_limit:
@@ -286,6 +300,69 @@ These headers are excluded from XSS checks to avoid false positives:
 - `Referer`
 - `Origin`
 - `Host`
+
+## Path Traversal Detection
+
+### Configuration Options
+
+```yaml
+path_traversal:
+  enabled: true      # Master switch
+  block_mode: true   # Block detected attacks
+```
+
+### Detection Patterns
+
+The path traversal detector checks for:
+
+1. **Standard Traversal**
+   - `../` and `..\`
+   - `.../` (triple dot)
+
+2. **Encoded Traversal**
+   - `%2e%2e%2f` (URL encoded `../`)
+   - `%252e` (Double encoded `.` )
+   - `..%c0%af` (UTF-8 overlong)
+
+3. **Sensitive Files**
+   - `/etc/passwd`
+   - `/etc/shadow`
+   - `/proc/self`
+   - `windows/win.ini`
+   - `.env`, `.git`, `.htaccess`
+
+## Command Injection Detection
+
+### Configuration Options
+
+```yaml
+command_injection:
+  enabled: true      # Master switch
+  block_mode: true   # Block detected attacks
+```
+
+### Detection Patterns
+
+The command injection detector checks for:
+
+1. **Command Chaining**
+   - `;` (semicolon)
+   - `|` (pipe)
+   - `&&` (AND operator)
+   - `||` (OR operator)
+
+2. **Command Substitution**
+   - `$(...)`
+   - `` `...` `` (backticks)
+
+3. **Dangerous Commands**
+   - `rm`, `wget`, `curl`, `nc`
+   - `cat /etc`, `ping`, `whoami`
+
+4. **Shell Invocations**
+   - `/bin/sh`
+   - `/bin/bash`
+   - `cmd.exe`
 
 ## Rate Limiting
 
@@ -740,6 +817,32 @@ Request body too large
 ```
 
 Metric incremented: `waf_blocked_requests{reason="body_too_large"}`
+
+## Hot Configuration Reload
+
+Pingora WAF supports reloading configuration changes without restarting the server.
+
+### Configuration Options
+
+```yaml
+hot_reload:
+  enabled: true             # Enable file watcher
+  watch_interval_secs: 5    # Check for changes every 5 seconds
+```
+
+### How It Works
+
+1. The WAF monitors `config/` directory for changes
+2. When a file is modified (e.g. `waf_rules.yaml`), the watcher detects the event
+3. The new configuration is validated
+4. If valid, the WAF atomically swaps the configuration
+5. "Configuration reloaded" message is logged
+
+### Benefits
+
+- Zero downtime updates
+- Immediate security rule application
+- Safe fallback (invalid config is ignored)
 
 ## Backend Configuration
 

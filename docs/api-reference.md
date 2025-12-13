@@ -178,6 +178,36 @@ match detector.check(&request, Some(body)) {
 }
 ```
 
+### PathTraversalDetector
+
+Detects path traversal attacks (e.g., `../`).
+
+```rust
+pub struct PathTraversalDetector {
+    pub enabled: bool,
+    pub block_mode: bool,
+}
+
+impl PathTraversalDetector {
+    pub fn new(enabled: bool, block_mode: bool) -> Self;
+}
+```
+
+### CommandInjectionDetector
+
+Detects command injection attempts (e.g., `; cat /etc/passwd`).
+
+```rust
+pub struct CommandInjectionDetector {
+    pub enabled: bool,
+    pub block_mode: bool,
+}
+
+impl CommandInjectionDetector {
+    pub fn new(enabled: bool, block_mode: bool) -> Self;
+}
+```
+
 ### RateLimiter
 
 Per-IP rate limiting with sliding window algorithm.
@@ -522,6 +552,9 @@ Main configuration structure loaded from YAML.
 pub struct WafConfig {
     pub sql_injection: RuleConfig,
     pub xss: RuleConfig,
+    pub path_traversal: RuleConfig,
+    pub command_injection: RuleConfig,
+    pub hot_reload: HotReloadConfig,
     pub rate_limit: RateLimitConfig,
     pub ip_filter: IpFilterConfig,
     pub max_body_size: usize,
@@ -602,6 +635,21 @@ pub struct IpFilterConfig {
 
     /// List of blocked IPs
     pub blacklist: Vec<String>,
+}
+```
+
+### HotReloadConfig
+
+Configuration for hot reloading.
+
+```rust
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct HotReloadConfig {
+    /// Whether hot reload is enabled
+    pub enabled: bool,
+
+    /// Watch interval in seconds
+    pub watch_interval_secs: u64,
 }
 ```
 
