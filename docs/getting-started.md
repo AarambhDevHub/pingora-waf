@@ -188,6 +188,18 @@ xss:
   enabled: true       # XSS detection ON
   block_mode: true    # Blocking mode
 
+path_traversal:
+  enabled: true       # Path traversal ON
+  block_mode: true
+
+command_injection:
+  enabled: true       # Command injection ON
+  block_mode: true
+  
+hot_reload:
+  enabled: true       # Hot reload ON
+  watch_interval_secs: 5
+
 rate_limit:
   enabled: true       # Rate limiting ON
   max_requests: 1000  # 1000 requests per minute per IP
@@ -263,6 +275,20 @@ curl -X POST http://localhost:6188/api/comment \
 **Expected Response:**
 ```
 HTTP/1.1 403 Forbidden
+```
+
+#### Test Path Traversal Protection
+
+```bash
+# This should be BLOCKED
+curl "http://localhost:6188/api/../../../etc/passwd"
+```
+
+#### Test Command Injection Protection
+
+```bash
+# This should be BLOCKED
+curl "http://localhost:6188/api/test?cmd=cat%20/etc/passwd"
 ```
 
 #### Test Rate Limiting
@@ -455,7 +481,15 @@ cargo run --example security_test
    ✓ Blocked XSS: <iframe src=javascript:alert(1)>
    ✓ Blocked XSS: <body onload=alert(1)>
 
-🛡️  Test 4: SQL Injection in Custom Headers
+🛡️  Test 4: Path Traversal
+   ✓ Blocked: /api/../../../etc/passwd
+   ✓ Blocked: /api/sensitive/file
+
+🛡️  Test 5: Command Injection
+   ✓ Blocked: /api/test?cmd=rm -rf /
+   ✓ Blocked: /api/test?q=$(whoami)
+
+🛡️  Test 6: SQL Injection in Custom Headers
    ✓ Blocked SQL injection in header
 
 🛡️  Test 5: Rate Limiting (sending 110 rapid requests)

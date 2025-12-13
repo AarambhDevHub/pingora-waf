@@ -12,11 +12,14 @@ A high-performance, memory-safe Web Application Firewall built with Cloudflare's
 ### Security Protection
 - ✅ **SQL Injection Detection** - Advanced pattern matching with 15+ attack signatures, 100% detection rate
 - ✅ **XSS Prevention** - Cross-site scripting attack blocking with URL decoding
+- ✅ **Path Traversal Detection** - Block directory traversal attacks (../, encoded variants, sensitive file access)
+- ✅ **Command Injection Detection** - Prevent shell command injection (;, |, &&, $(), backticks)
 - ✅ **Rate Limiting** - Per-IP request throttling with configurable windows
 - ✅ **IP Filtering** - Whitelist/blacklist with CIDR notation support (e.g., `10.0.0.0/8`)
 - ✅ **Bot Detection** - Block malicious bots (sqlmap, nikto, scrapers) while allowing Googlebot, Bingbot
 - ✅ **Request Body Inspection** - Deep packet analysis with configurable size limits (1MB default)
 - ✅ **Header Validation** - Custom header security checks with safe header exemptions
+- ✅ **Hot Configuration Reload** - Reload WAF rules without restarting the server
 
 ### Performance (Benchmarked)
 - ⚡ **15,143 req/sec** - Single instance throughput on standard hardware

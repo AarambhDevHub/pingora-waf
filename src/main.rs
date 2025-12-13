@@ -72,6 +72,16 @@ fn main() {
 
     let xss_detector = Arc::new(XssDetector::new(config.xss.enabled, config.xss.block_mode));
 
+    let path_traversal_detector = Arc::new(PathTraversalDetector::new(
+        config.path_traversal.enabled,
+        config.path_traversal.block_mode,
+    ));
+
+    let command_injection_detector = Arc::new(CommandInjectionDetector::new(
+        config.command_injection.enabled,
+        config.command_injection.block_mode,
+    ));
+
     let rate_limiter = Arc::new(RateLimiter::new(
         config.rate_limit.max_requests,
         config.rate_limit.window_secs,
@@ -116,6 +126,8 @@ fn main() {
         (upstream_host.clone(), upstream_port),
         sql_detector,
         xss_detector,
+        path_traversal_detector,
+        command_injection_detector,
         rate_limiter.clone(),
         ip_filter,
         bot_detector,
